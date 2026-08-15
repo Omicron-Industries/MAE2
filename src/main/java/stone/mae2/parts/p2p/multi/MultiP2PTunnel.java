@@ -94,7 +94,7 @@ public abstract class MultiP2PTunnel<T extends MultiP2PTunnel<T, L, P>, L extend
       if (part.hasCustomName()) {
         this.customName = part.getCustomName();
       }
-      inputs.add(this.createLogic(part));
+      inputs.add(logic);
     }
     this.updateTunnels(part.isOutput(), false);
     return logic;
@@ -112,7 +112,9 @@ public abstract class MultiP2PTunnel<T extends MultiP2PTunnel<T, L, P>, L extend
    */
   public boolean removeTunnel(P part) {
     boolean wasIn = false;
-    Optional<L> logic = part.getLogic();
+    // not getLogic(), because it returns an empty optional
+    // in this moment
+    Optional<L> logic = part.getAttachedLogic();
     if (part.isOutput()) {
       this.updateTunnels(true, false);
       if (logic.isPresent())
@@ -236,6 +238,8 @@ public abstract class MultiP2PTunnel<T extends MultiP2PTunnel<T, L, P>, L extend
 
     public Optional<L> getLogic() {
       return this.getFrequency() != 0 && this.isActive() ? this.logic : Optional.empty(); }
+
+    protected Optional<L> getAttachedLogic() { return this.logic; }
 
     protected final L setLogic(L logic) {
       this.logic = Optional.ofNullable(logic);
