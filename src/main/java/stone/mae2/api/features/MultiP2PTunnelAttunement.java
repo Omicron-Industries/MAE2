@@ -50,7 +50,6 @@ public final class MultiP2PTunnelAttunement {
 
     public static void registerStockAttunements() {
         // Stock Multi P2P Attunements
-    	/*
         MultiP2PTunnelAttunement.registerAttunementItem(MAE2Items.PATTERN_P2P_TUNNEL.get(),
             MAE2Items.PATTERN_MULTI_P2P_TUNNEL.get());
         MultiP2PTunnelAttunement.registerAttunementItem(AEParts.REDSTONE_P2P_TUNNEL.asItem(),
@@ -62,6 +61,5 @@ public final class MultiP2PTunnelAttunement {
             MAE2Items.FLUID_MULTI_P2P_TUNNEL.get());
         MultiP2PTunnelAttunement.registerAttunementItem(AEParts.ITEM_P2P_TUNNEL.asItem(),
             MAE2Items.ITEM_MULTI_P2P_TUNNEL.get());
-          */  
     }
 }
