@@ -54,6 +54,8 @@ public class MAE2RecipeProvider extends RecipeProvider {
       "network/crafting/256x_crafting_accelerator");
 
     MultiP2PTunnelAttunement.registerStockAttunements();
+    /* This doesn't work anymore for some reason, updating it would change
+    recipe ids, so wait for a bigger version to change
     for (var tunnelPair : MultiP2PTunnelAttunement.getRegistry().entrySet()) {
       String simpleName = tunnelPair.getValue().getPartClass().getSimpleName();
       buildMultiP2PRecipe(consumer, tunnelPair.getValue(), tunnelPair.getKey(),
@@ -62,6 +64,7 @@ public class MAE2RecipeProvider extends RecipeProvider {
             .substring(0, simpleName.length() - "MultiP2PPart".length())
             .toLowerCase()));
     }
+    */
 
     // stopgap for the fact that ME Multi P2Ps don't exist (so there's no direct
     // crafting recipe to Multi P2Ps, you'd need to attune a ME P2P to something

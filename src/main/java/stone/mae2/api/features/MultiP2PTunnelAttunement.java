@@ -23,7 +23,9 @@ import java.util.Map;
 import java.util.Objects;
 
 import appeng.api.parts.IPartItem;
+import appeng.core.definitions.AEParts;
 import appeng.parts.p2p.P2PTunnelPart;
+import stone.mae2.bootstrap.MAE2Items;
 import stone.mae2.parts.p2p.multi.MultiP2PTunnel;
 
 public final class MultiP2PTunnelAttunement {
