@@ -44,7 +44,7 @@ public abstract class FaultyCardMode {
 
     public static FaultyCardMode of(ItemStack stack) {
         CompoundTag data = getData(stack);
-        var supplier = REGISTRY.get(new ResourceLocation(data.getString(MODE_TYPE)));
+        var supplier = REGISTRY.get(ResourceLocation.parse(data.getString(MODE_TYPE)));
         if (supplier == null) {
             return new AoEPaste();
         } else {
@@ -65,11 +65,14 @@ public abstract class FaultyCardMode {
         CYCLE_ORDER.add(key);
     }
 
+    @Deprecated
     public static void register(String namespace, String path, Supplier<FaultyCardMode> supplier) {
         register(new ResourceLocation(namespace, path), supplier);
     }
 
     // I don't like this, but it works. Really should be static somehow
+    // I've kinda forgetten what the point of this was, I think I wanted to
+    // automatically grab all the subclasses of FaultyCardMode or something idk
     public abstract ResourceLocation getType();
 
     /**
@@ -115,12 +118,15 @@ public abstract class FaultyCardMode {
     static {
         // List of Colors in use
 
-        // Black > White to show the size of AoE + Grays might be hard to discern
+        // Black > White to show the size of AoE + Grays in other modes might be
+        // hard to discern
         register(new AoEPaste().getType(), AoEPaste::new);
         // Orange
         register(new GlobalPaste().getType(), GlobalPaste::new);
-        // Magenta
+        // Light Blue
         register(new Incrementing().getType(), Incrementing::new);
+        // Magenta (Copy) / Lime (Paste)
+        register(new UberMode().getType(), UberMode::new);
     }
 
     protected abstract Component getName();

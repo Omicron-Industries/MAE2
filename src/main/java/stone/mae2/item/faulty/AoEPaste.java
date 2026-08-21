@@ -67,7 +67,6 @@ public class AoEPaste extends FaultyCardMode {
         radius = (byte) (radius >= MAX_RADIUS ? 1 : radius + 1);
         this.save(stack.getOrCreateTag());
         player.displayClientMessage(Component.translatable(TransHelper.GUI.toKey("faulty", "radius"), 2 * radius + 1), true);
-        MAE2.LOGGER.info("Radius: {}/{}", this.radius, MAX_RADIUS);
         return InteractionResultHolder.consume(stack);
     }
     
