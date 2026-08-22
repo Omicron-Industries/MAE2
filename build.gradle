@@ -74,6 +74,9 @@ legacyForge {
 sourceSets {
     main {
         ext.refMap = "mixins.${mod_id}.refmap.json"
+        resources {
+            srcDirs "src/generated/resources"
+        }
     }
 }
 
