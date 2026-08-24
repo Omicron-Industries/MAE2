@@ -89,7 +89,6 @@ public class AoEPaste extends FaultyCardMode {
                     for (int j = -radius * y; j <= radius * y; j++) {
                         for (int k = -radius * z; k <= radius * z; k++) {
                             BlockEntity aoeBE = level.getBlockEntity(clicked.offset(i, j, k));
-                            MAE2.LOGGER.info("Iterated over Faulty Card!");
                             if (aoeBE instanceof IPartHost aoePartHost) {
                                 IPart part = aoePartHost.getPart(selectedPart.side);
                                 if (part != null) {
