@@ -39,7 +39,6 @@ import java.util.Set;
 public class PatternP2PTunnelLogic implements ICraftingMachine {
 
   protected final PatternP2PTunnel tunnel;
-  protected PatternProviderTargetCache caches[];
   protected Set<AEKey> patternInputs;
   private int lastOutputIndex = 0;
 
@@ -68,14 +67,15 @@ public class PatternP2PTunnelLogic implements ICraftingMachine {
     try {
       isRecursive = true;
       List<? extends Target> outputs = tunnel.getPatternTunnelOutputs();
-      if (outputs.size() <= 0)
+      if (outputs.isEmpty())
         return false;
       boolean isExternal = pattern.supportsPushInputsToExternalInventory();
-      int i = lastOutputIndex;
+      int start = this.lastOutputIndex % outputs.size();
+      int i = start;
       do {
         i = (i + 1) % outputs.size();
         Target output = outputs.get(i);
-        if (!output.isValid())
+        if (!output.canAcceptPattern())
           continue;
         ICraftingMachine craftingMachine = ICraftingMachine
           .of(output.level(), output.pos(), output.side(),
@@ -89,11 +89,11 @@ public class PatternP2PTunnelLogic implements ICraftingMachine {
           continue;
         }
 
-          if (isExternal) {
-              if (caches == null || caches.length != outputs.size()) {
-                  refreshOutputs();
-              }
-              final PatternProviderTarget target = caches[i].find();
+        if (isExternal) {
+          PatternProviderTargetCache cache = output.getCache();
+          if (cache == null)
+            continue;
+          final PatternProviderTarget target = cache.find();
           if (target == null
             || shouldBlock(isBlocking, target, this.patternInputs))
             continue;
@@ -109,9 +109,9 @@ public class PatternP2PTunnelLogic implements ICraftingMachine {
             return true;
           }
         }
-      } while (i != lastOutputIndex);
+      } while (i != start);
     } catch (Throwable t) {
-        MAE2.LOGGER.error(t.getLocalizedMessage());
+      MAE2.LOGGER.error("Failed to push a pattern through a pattern p2p", t);
     } finally {
       isRecursive = false;
     }
@@ -133,20 +133,9 @@ public class PatternP2PTunnelLogic implements ICraftingMachine {
             : target.containsPatternInput(inputs));
   }
 
-  // TODO make this more incremental instead of resetting everything on any
-  // change
   public void refreshOutputs() {
-    List<? extends Target> outputs = tunnel.getPatternTunnelOutputs();
-    if (outputs.isEmpty()){
-      this.caches = null;
-      return;
-    }
-    this.caches = new PatternProviderTargetCache[outputs.size()];
-    for (int i = 0; i < this.caches.length; i++) {
-      Target output = outputs.get(i);
-      this.caches[i] = output.getCache();
-    }
-    this.lastOutputIndex = this.lastOutputIndex % outputs.size();
+    int outputCount = tunnel.getPatternTunnelOutputs().size();
+    this.lastOutputIndex = outputCount == 0 ? 0 : this.lastOutputIndex % outputCount;
   }
 
   // TODO make this more incremental instead of resetting everything on any
@@ -241,7 +230,9 @@ public class PatternP2PTunnelLogic implements ICraftingMachine {
       return new PatternProviderTargetCache(this.level(), this.pos(), this.side(), this.source());
     }
 
-    boolean isValid();
+    boolean canAcceptPattern();
+
+    boolean isActive();
 
     void addToSendList(AEKey what, long l);
 

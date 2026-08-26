@@ -2,6 +2,7 @@ package stone.mae2.parts.p2p.multi;
 
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.networking.IGrid;
+import appeng.api.networking.IGridNode;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.IPart;
@@ -136,7 +137,7 @@ public class PatternMultiP2PTunnel extends
     }
 
     public <T> LazyOptional<T> getCapability(Capability<T> capabilityClass) {
-      if (capabilityClass == Capabilities.CRAFTING_MACHINE)
+      if (capabilityClass == Capabilities.CRAFTING_MACHINE && !this.part.isOutput())
         return (LazyOptional<T>) LazyOptional
           .of(() -> PatternMultiP2PTunnel.this.logic);
       if (this.part.isOutput()) {
@@ -318,8 +319,13 @@ public class PatternMultiP2PTunnel extends
     }
 
     @Override
-    public boolean isValid() { // TODO Auto-generated method stub
-      return this.partLogic.isValid();
+    public boolean canAcceptPattern() {
+      // The nodes isActive(), not the parts, because
+      // the parts one is the visual state and ignores grid booting,
+      // so it stays true for the few ticks after a connection breaking
+      IGridNode node = this.getGridNode();
+      return node != null && node.isActive()
+        && this.partLogic.isSendListEmpty();
     }
 
     @Override

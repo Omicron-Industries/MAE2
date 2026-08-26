@@ -9,6 +9,7 @@ import appeng.api.networking.ticking.TickingRequest;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.helpers.patternprovider.PatternProviderTarget;
+import appeng.helpers.patternprovider.PatternProviderTargetCache;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -19,14 +20,14 @@ import stone.mae2.MAE2;
 import stone.mae2.bootstrap.MAE2Config.TickRates.TickRate;
 import stone.mae2.parts.p2p.PatternP2PTunnelLogic.Target;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class PatternP2PPartLogic implements IGridTickable {
 
   private static final String NBT_SEND_LIST = "sendList";
-  private final Set<GenericStack> sendList = new HashSet<>();
+  // a List, not a Set: two identical stacks are two separate debts
+  private final List<GenericStack> sendList = new ArrayList<>();
   private final PatternP2PPartLogicHost part;
 
   public PatternP2PPartLogic(PatternP2PPartLogicHost part) {
@@ -46,14 +47,20 @@ public class PatternP2PPartLogic implements IGridTickable {
     int ticksSinceLastCall) {
     if (this.sendList.isEmpty())
       return TickRateModulation.SLEEP;
-    PatternProviderTarget target = this.part.getCache().find();
+    if (!this.part.getMainNode().isActive())
+      return TickRateModulation.IDLE;
+    PatternProviderTargetCache cache = this.part.getCache();
+    if (cache == null) {
+      return TickRateModulation.IDLE;
+    }
+    PatternProviderTarget target = cache.find();
     if (target == null) {
       return TickRateModulation.IDLE;
     }
 
     boolean didSomething = false;
 
-    for (var it = sendList.iterator(); it.hasNext();) {
+    for (var it = sendList.listIterator(); it.hasNext();) {
       var stack = it.next();
       var what = stack.what();
       long amount = stack.amount();
@@ -63,7 +70,7 @@ public class PatternP2PPartLogic implements IGridTickable {
         it.remove();
         didSomething = true;
       } else if (inserted > 0) {
-        // it.set(new GenericStack(what, amount - inserted));
+        it.set(new GenericStack(what, amount - inserted));
         didSomething = true;
       }
     }
@@ -79,7 +86,7 @@ public class PatternP2PPartLogic implements IGridTickable {
 
   }
 
-  public boolean isValid() { return this.sendList.isEmpty(); }
+  public boolean isSendListEmpty() { return this.sendList.isEmpty(); }
 
   public void addToSendList(AEKey what, long l) {
     boolean wasEmpty = this.sendList.isEmpty();

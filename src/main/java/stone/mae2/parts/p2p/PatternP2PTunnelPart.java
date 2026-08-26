@@ -1,8 +1,7 @@
 package stone.mae2.parts.p2p;
 
-import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
-import appeng.api.networking.IGridNodeListener;
+import appeng.api.networking.IGridNode;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.parts.IPart;
@@ -52,11 +51,8 @@ public class PatternP2PTunnelPart extends P2PTunnelPart<PatternP2PTunnelPart>
   public PatternP2PTunnelPart(IPartItem<?> partItem) {
     super(partItem);
     this.source = new MachineSource(this);
-    if (this.isOutput()) {
-      this.logic = null;
-    } else {
-      this.logic = LazyOptional.of(() -> new PatternP2PTunnelLogic(this));
-    }
+    // isOutput() is false because nbt was not read yet
+    this.logic = LazyOptional.of(() -> new PatternP2PTunnelLogic(this));
   }
 
   @Override
@@ -92,7 +88,14 @@ public class PatternP2PTunnelPart extends P2PTunnelPart<PatternP2PTunnelPart>
     }
   }
 
-  public boolean isValid() { return this.partLogic.isValid(); }
+  public boolean canAcceptPattern() {
+    // deliberately the node's isActive(), not the part's: AEBasePart.isActive()
+    // is the visual one and ignores grid booting, so it stays true for the few
+    // ticks between a connection being cut and the repath finishing
+    IGridNode node = this.getGridNode();
+    return node != null && node.isActive()
+      && this.partLogic.isSendListEmpty();
+  }
 
   public void addToSendList(AEKey what, long l) {
     this.partLogic.addToSendList(what, l);
@@ -140,8 +143,7 @@ public class PatternP2PTunnelPart extends P2PTunnelPart<PatternP2PTunnelPart>
   @Override
   public <T> LazyOptional<T> getCapability(Capability<T> capabilityClass) {
     if (this.isActive() && this.getFrequency() != 0) {
-      if (this.logic != null
-        && capabilityClass == Capabilities.CRAFTING_MACHINE)
+      if (capabilityClass == Capabilities.CRAFTING_MACHINE && !this.isOutput())
         return (LazyOptional<T>) logic;
       if (this.isOutput()) {
         PatternP2PTunnelPart provider = this.getInput();
