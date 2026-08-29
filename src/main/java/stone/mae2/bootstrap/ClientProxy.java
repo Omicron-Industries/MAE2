@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.registries.DeferredRegister;
@@ -21,6 +22,7 @@ import stone.mae2.client.render.model.FaultyCardModel;
 import stone.mae2.hooks.BuiltInModelHooks;
 import stone.mae2.integration.MultiP2PStateDataProvider;
 import stone.mae2.item.faulty.FaultyMemoryCardItem;
+import stone.mae2.item.faulty.UberMode;
 import stone.mae2.parts.p2p.multi.MultiP2PTunnel;
 
 public class ClientProxy implements Proxy {
@@ -42,6 +44,8 @@ public class ClientProxy implements Proxy {
                     }
                   })
                 .build());
+
+    MinecraftForge.EVENT_BUS.addListener(UberMode::onRenderHighlight);
 
     BuiltInModelHooks
       .addBuiltInModel(MAE2.toKey("block/crafting/4x_accelerator_formed"),

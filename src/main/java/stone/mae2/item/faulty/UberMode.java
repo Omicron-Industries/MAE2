@@ -1,10 +1,22 @@
 package stone.mae2.item.faulty;
 
+import org.joml.Matrix4f;
+
+import com.lowdragmc.lowdraglib.utils.ColorUtils;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartHost;
 import appeng.api.parts.SelectedPart;
 import appeng.api.util.AEColor;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -13,7 +25,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.RenderHighlightEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import stone.mae2.MAE2;
+import stone.mae2.bootstrap.MAE2Items;
 import stone.mae2.util.TransHelper;
 
 public class UberMode extends FaultyCardMode {
@@ -35,19 +53,22 @@ public class UberMode extends FaultyCardMode {
       BlockPos end = context.getClickedPos();
       Level level = context.getLevel();
       BlockEntity be = level.getBlockEntity(context.getClickedPos());
+      Direction side = context.getClickedFace();
       if (be instanceof IPartHost originalHost) {
         SelectedPart selectedPart = originalHost.selectPartWorld(context.getClickLocation());
+        side = selectedPart.side;
+      }
         boolean failed = false;
+        
         for (BlockPos pos : BlockPos.betweenClosed(start, end)) {
           BlockEntity maybeCable = level.getBlockEntity(pos);
           if (maybeCable instanceof IPartHost aoePartHost) {
-            IPart part = aoePartHost.getPart(selectedPart.side);
+            IPart part = aoePartHost.getPart(side);
             if (part != null) {
               // no idea what the Vec pos argument does here, doesn't seem used in any implementation
               failed |= !part.onActivate(context.getPlayer(), context.getHand(), context.getClickLocation());
             }
           }
-        }
 
         if (failed) {
           context.getPlayer().displayClientMessage(Component.translatable(TransHelper.GUI.toKey("faulty", "multi", "failed")), true);
@@ -87,4 +108,37 @@ public class UberMode extends FaultyCardMode {
 	public int getTintColor() {
     return AEColor.LIGHT_BLUE.mediumVariant;
 	}
+
+  // TODO: move this to main faulty card class so others could utilize it
+  @SubscribeEvent
+  public static void onRenderHighlight(RenderHighlightEvent.Block event) {
+    Minecraft client = Minecraft.getInstance();
+    LocalPlayer player = client.player;
+    ItemStack main = player.getMainHandItem();
+    if (main.isEmpty()) {
+      main = player.getOffhandItem();
+    }
+    if (!main.isEmpty() && main.getItem() == MAE2Items.FAULTY_MEMORY_CARD.get()) {
+      FaultyCardMode mode = FaultyCardMode.of(main);
+      if (mode instanceof UberMode uber) {
+        if (uber.start != null) {
+          // rendering stuff I kinda understand
+          PoseStack poses = event.getPoseStack();
+          poses.pushPose();
+          Vec3 camera = event.getCamera().getPosition();
+          poses.translate(-camera.x, -camera.y, -camera.z);
+          VertexConsumer consumer = event.getMultiBufferSource().getBuffer(RenderType.lines());
+          // this automatically figures out how to fit the entire corner blocks
+          // into the bounding box
+          BoundingBox box = BoundingBox.fromCorners(event.getTarget().getBlockPos(), uber.start);
+          int color = AEColor.LIGHT_BLUE.whiteVariant;
+          float red   = ((color & 0xFF000000) >> 24) / 255f;
+          float green = ((color & 0x00FF0000) >> 16) / 255f;
+          float blue  = ((color & 0x0000FF00) >>  8) / 255f;
+          LevelRenderer.renderLineBox(poses, consumer, AABB.of(box), red, green, blue, 1);
+          poses.popPose();
+        }
+      }
+    }
+  }
 }
