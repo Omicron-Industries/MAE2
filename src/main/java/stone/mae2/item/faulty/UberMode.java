@@ -3,7 +3,10 @@ package stone.mae2.item.faulty;
 import org.joml.Matrix4f;
 
 import com.lowdragmc.lowdraglib.utils.ColorUtils;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import appeng.api.parts.IPart;
@@ -14,6 +17,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,14 +25,20 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderHighlightEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent.Stage;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import stone.mae2.MAE2;
 import stone.mae2.bootstrap.MAE2Items;
@@ -111,7 +121,9 @@ public class UberMode extends FaultyCardMode {
 
   // TODO: move this to main faulty card class so others could utilize it
   @SubscribeEvent
-  public static void onRenderHighlight(RenderHighlightEvent.Block event) {
+  public static void onRenderLevel(RenderLevelStageEvent event) {
+    if (event.getStage() != Stage.AFTER_SOLID_BLOCKS)
+      return;
     Minecraft client = Minecraft.getInstance();
     LocalPlayer player = client.player;
     ItemStack main = player.getMainHandItem();
@@ -121,24 +133,61 @@ public class UberMode extends FaultyCardMode {
     if (!main.isEmpty() && main.getItem() == MAE2Items.FAULTY_MEMORY_CARD.get()) {
       FaultyCardMode mode = FaultyCardMode.of(main);
       if (mode instanceof UberMode uber) {
-        if (uber.start != null) {
+        BlockHitResult hit = rayTrace(player.level(), player);
+        if (uber.start != null && hit.getType() == HitResult.Type.BLOCK) {
+          BlockPos end = hit.getBlockPos();
           // rendering stuff I kinda understand
           PoseStack poses = event.getPoseStack();
           poses.pushPose();
           Vec3 camera = event.getCamera().getPosition();
           poses.translate(-camera.x, -camera.y, -camera.z);
-          VertexConsumer consumer = event.getMultiBufferSource().getBuffer(RenderType.lines());
+          //VertexConsumer consumer =
+          //event.getMultiBufferSource().getBuffer(RenderType.lines());
           // this automatically figures out how to fit the entire corner blocks
           // into the bounding box
-          BoundingBox box = BoundingBox.fromCorners(event.getTarget().getBlockPos(), uber.start);
+          BoundingBox box = BoundingBox.fromCorners(end, uber.start);
           int color = AEColor.LIGHT_BLUE.whiteVariant;
           float red   = ((color & 0xFF000000) >> 24) / 255f;
           float green = ((color & 0x00FF0000) >> 16) / 255f;
           float blue  = ((color & 0x0000FF00) >>  8) / 255f;
-          LevelRenderer.renderLineBox(poses, consumer, AABB.of(box), red, green, blue, 1);
+
+          // what is a tesselator? idk, but this lets me render stuff
+          // feel like this should be bad, but idk. Should only be a problem when
+          // rendering the box anyways
+          BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
+          MultiBufferSource.BufferSource buffer = MultiBufferSource.immediate(bufferBuilder);
+          VertexConsumer consumer = buffer.getBuffer(RenderType.lines());
+          // inflate by tiny bit to prevent z-fighting
+          AABB aabb = AABB.of(box).inflate(0.01);
+          LevelRenderer.renderLineBox(poses, consumer, aabb, red, green, blue, 1);
+          buffer.endBatch();
           poses.popPose();
         }
       }
     }
+  }
+
+  public static BlockHitResult rayTrace(Level level, Player player) {
+    return rayTrace(level, player, player.getBlockReach());
+  }
+  // stolen with permission from Spatial Tools Compatiable
+  public static BlockHitResult rayTrace(Level level, Player player, double maxDistance) {
+    Vec3 eye = player.getEyePosition(1.0F);
+    Vec3 look = player.getViewVector(1.0F);
+    Vec3 end = eye.add(look.x * maxDistance, look.y * maxDistance, look.z * maxDistance);
+
+    ClipContext context = new ClipContext(
+                                          eye,
+                                          end,
+                                          ClipContext.Block.OUTLINE,
+                                          ClipContext.Fluid.NONE,
+                                          player);
+
+    HitResult result = level.clip(context);
+    if (result instanceof BlockHitResult blockHit && result.getType() == HitResult.Type.BLOCK) {
+      return blockHit;
+    }
+
+    return BlockHitResult.miss(end, Direction.getNearest(look.x, look.y, look.z), BlockPos.containing(end));
   }
 }

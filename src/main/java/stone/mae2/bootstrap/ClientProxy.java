@@ -45,8 +45,6 @@ public class ClientProxy implements Proxy {
                   })
                 .build());
 
-    MinecraftForge.EVENT_BUS.addListener(UberMode::onRenderHighlight);
-
     BuiltInModelHooks
       .addBuiltInModel(MAE2.toKey("block/crafting/4x_accelerator_formed"),
                        new CraftingCubeModel(new DynamicCraftingCubeModelProvider(
@@ -81,6 +79,8 @@ public class ClientProxy implements Proxy {
           .register(FaultyMemoryCardItem::getTintColor,
                     MAE2Items.FAULTY_MEMORY_CARD.get());
       });
+
+    MinecraftForge.EVENT_BUS.addListener(UberMode::onRenderLevel);
 
     bus.addListener((FMLClientSetupEvent event) -> {
         event.enqueueWork(() -> {
